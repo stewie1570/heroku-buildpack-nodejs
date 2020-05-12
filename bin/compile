@@ -259,9 +259,10 @@ build_dependencies() {
 
   mtime "modules.time.cache.$cache_status" "${start}"
 
-  meta_set "build-step" "build-script"
-  header "Build"
-  run_build_script "$BUILD_DIR"
+  # Let the buildpack that owns the SPA build it.
+  # meta_set "build-step" "build-script"
+  # header "Build"
+  # run_build_script "$BUILD_DIR"
 }
 
 meta_set "build-step" "install-dependencies"
