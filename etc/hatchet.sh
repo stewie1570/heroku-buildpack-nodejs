@@ -25,7 +25,9 @@ if [ -z "$HEROKU_API_KEY" ]; then
   exit 1
 fi
 
-if [ -n "$CIRCLE_BRANCH" ]; then
+if [[ "$CIRCLE_PROJECT_REPONAME" == "nodebin" ]]; then
+  HATCHET_BUILDPACK_BRANCH="master"
+elif [ -n "$CIRCLE_BRANCH" ]; then
   HATCHET_BUILDPACK_BRANCH="$CIRCLE_BRANCH"
 elif [ -n "$TRAVIS_PULL_REQUEST_BRANCH" ]; then
   export IS_RUNNING_ON_TRAVIS=true
@@ -36,7 +38,6 @@ fi
 
 export HATCHET_BUILDPACK_BRANCH
 
-gem install bundler
 bundle install
 
 export HATCHET_RETRIES=3
@@ -44,4 +45,4 @@ export HATCHET_APP_LIMIT=20
 export HATCHET_DEPLOY_STRATEGY=git
 export HATCHET_BUILDPACK_BASE="https://github.com/heroku/heroku-buildpack-nodejs"
 
-bundle exec rspec "$@"
+bundle exec parallel_split_test "$@"
