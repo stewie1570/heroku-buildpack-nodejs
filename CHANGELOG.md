@@ -1,9 +1,47 @@
 # Node.js Buildpack Changelog
 
-## master
+## main
+- Update node version to 14 ([#885](https://github.com/heroku/heroku-buildpack-nodejs/pull/885))
+
+## v182 (2020-01-05)
+- add Node 14.15.3 and 15.5.0 to inventory ([#881](https://github.com/heroku/heroku-buildpack-nodejs/pull/881))
+- Report on parsing errors for `resolve-version.rs` ([#883](https://github.com/heroku/heroku-buildpack-nodejs/pull/883))
+- Add an environment variable for using npm install (instead of npm ci) ([#882](https://github.com/heroku/heroku-buildpack-nodejs/pull/882))
+- add Node 10.23.1, 12.20.1, 14.15.4, and 15.5.1 to inventory ([#886](https://github.com/heroku/heroku-buildpack-nodejs/pull/886))
+
+## v181 (2020-12-16)
+- Warn to use build flag with ng build as build script ([#878](https://github.com/heroku/heroku-buildpack-nodejs/pull/878))
+- add Node 14.15.2 to inventory ([#879](https://github.com/heroku/heroku-buildpack-nodejs/pull/879))
+
+## v180 (2020-12-09)
+- add Node 15.4.0 to inventory ([#873](https://github.com/heroku/heroku-buildpack-nodejs/pull/873))
+
+## v179 (2020-12-07)
+- Fix syntax for passing in script flags for npm build script ([#869](https://github.com/heroku/heroku-buildpack-nodejs/pull/869))
+- add Node 15.3.0 and 12.20.0 to inventory ([#870](https://github.com/heroku/heroku-buildpack-nodejs/pull/870))
+
+## v178 (2020-11-17)
+- Add NODE_BUILD_FLAG env var ([#859](https://github.com/heroku/heroku-buildpack-nodejs/pull/859))
+- Add 12.19.1, 14.15.1, and 15.2.1 to inventory for security releases ([#865](https://github.com/heroku/heroku-buildpack-nodejs/pull/865))
+
+## v177 (2020-11-12)
+- add Node 15.2.0 to inventory ([#861](https://github.com/heroku/heroku-buildpack-nodejs/pull/861))
+- Use jq from the stack image ([#854](https://github.com/heroku/heroku-buildpack-nodejs/pull/854))
+- Start testing new `resolve` binaries with inventory lists for Node and Yarn ([#855](https://github.com/heroku/heroku-buildpack-nodejs/pull/855))
+- Follow up to [#855](https://github.com/heroku/heroku-buildpack-nodejs/pull/855) to send captured data with bin/report ([#858](https://github.com/heroku/heroku-buildpack-nodejs/pull/858))
+
+## v176 (2020-09-10)
+- Only run immutable cache in yarn 2 if caching enabled ([#832](https://github.com/heroku/heroku-buildpack-nodejs/pull/832))
+- Added Hatchet regression tests ([#833](https://github.com/heroku/heroku-buildpack-nodejs/pull/833))
+- Delete unused fixtures ([#835](https://github.com/heroku/heroku-buildpack-nodejs/pull/835))
+- Expand `npm ci` usage to 100% of builds ([#842](https://github.com/heroku/heroku-buildpack-nodejs/pull/842))
+
+## v175 (2020-08-13)
 - Install Yarn version at 1.22.x when not specified in package.json engines ([#817](https://github.com/heroku/heroku-buildpack-nodejs/pull/817))
 - Run `yarn install` for all Yarn 2 builds ([#819](https://github.com/heroku/heroku-buildpack-nodejs/pull/819))
 - Change all references from Yarn2 to Yarn 2 ([#824](https://github.com/heroku/heroku-buildpack-nodejs/pull/824))
+- Support Yarn 2 node modules ([#821](https://github.com/heroku/heroku-buildpack-nodejs/pull/821))
+- Detect for "node-modules" nodeLinker for Yarn 2 ([#828](https://github.com/heroku/heroku-buildpack-nodejs/pull/828))
 
 ## v174 (2020-07-23)
 - provide custom binary url for node and yarn binary downloads ([#804](https://github.com/heroku/heroku-buildpack-nodejs/pull/804))

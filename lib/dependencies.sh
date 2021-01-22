@@ -40,6 +40,43 @@ run_if_present() {
   fi
 }
 
+run_build_if_present() {
+  local build_dir=${1:-}
+  local script_name=${2:-}
+  local has_script_name
+  local script
+
+  has_script_name=$(has_script "$build_dir/package.json" "$script_name")
+  script=$(read_json "$build_dir/package.json" ".scripts[\"$script_name\"]")
+
+  if [[ "$script" == "ng build" ]]; then
+    warn "\"ng build\" detected as build script. We recommend you use \`ng build --prod\` or add \`--prod\` to your build flags. See https://devcenter.heroku.com/articles/nodejs-support#build-flags"
+  fi
+
+  if [[ "$has_script_name" == "true" ]]; then
+    if $YARN || $YARN_2; then
+      echo "Running $script_name (yarn)"
+      # yarn will throw an error if the script is an empty string, so check for this case
+      if [[ -n "$script" ]]; then
+        if [[ -n $NODE_BUILD_FLAGS ]]; then
+          echo "Running with $NODE_BUILD_FLAGS flags"
+          monitor "${script_name}-script" yarn run "$script_name" "$NODE_BUILD_FLAGS"
+        else
+          monitor "${script_name}-script" yarn run "$script_name"
+        fi
+      fi
+    else
+      echo "Running $script_name"
+      if [[ -n $NODE_BUILD_FLAGS ]]; then
+        echo "Running with $NODE_BUILD_FLAGS flags"
+        monitor "${script_name}-script" npm run "$script_name" --if-present -- "$NODE_BUILD_FLAGS"
+      else
+        monitor "${script_name}-script" npm run "$script_name" --if-present
+      fi
+    fi
+  fi
+}
+
 run_prebuild_script() {
   local build_dir=${1:-}
   local has_heroku_prebuild_script
@@ -59,7 +96,6 @@ run_build_script() {
 
   has_build_script=$(has_script "$build_dir/package.json" "build")
   has_heroku_build_script=$(has_script "$build_dir/package.json" "heroku-postbuild")
-
   if [[ "$has_heroku_build_script" == "true" ]] && [[ "$has_build_script" == "true" ]]; then
     echo "Detected both \"build\" and \"heroku-postbuild\" scripts"
     mcount "scripts.heroku-postbuild-and-build"
@@ -69,7 +105,7 @@ run_build_script() {
     run_if_present "$build_dir" 'heroku-postbuild'
   elif [[ "$has_build_script" == "true" ]]; then
     mcount "scripts.build"
-    run_if_present "$build_dir" 'build'
+    run_build_if_present "$build_dir" 'build'
   fi
 }
 
@@ -109,7 +145,13 @@ yarn_2_install() {
 
   echo "Running 'yarn install' with yarn.lock"
   cd "$build_dir" || return
-  monitor "yarn-2-install" yarn install --immutable --immutable-cache 2>&1
+
+  # If there is no cache we can't run immutable cache because a cache will be created by default
+  if ! has_yarn_cache "$build_dir"; then
+    monitor "yarn-2-install" yarn install --immutable 2>&1
+  else
+    monitor "yarn-2-install" yarn install --immutable --immutable-cache 2>&1
+  fi
 }
 
 yarn_prune_devdependencies() {
@@ -160,12 +202,12 @@ npm_node_modules() {
   if [ -e "$build_dir/package.json" ]; then
     cd "$build_dir" || return
 
-    if [[ "$(features_get "use-npm-ci")" == "true" ]] && [[ "$(should_use_npm_ci "$build_dir")" == "true" ]]; then
-      meta_set "supports-npm-ci" "true"
+    if [[ "$(should_use_npm_ci "$build_dir")" == "true" ]] && [[ "$USE_NPM_INSTALL" != "true" ]]; then
+      meta_set "use-npm-ci" "true"
       echo "Installing node modules"
       monitor "npm-install" npm ci --production="$production" --unsafe-perm --userconfig "$build_dir/.npmrc" 2>&1
     else
-      meta_set "supports-npm-ci" "false"
+      meta_set "use-npm-ci" "false"
       if [ -e "$build_dir/package-lock.json" ]; then
         echo "Installing node modules (package.json + package-lock)"
       elif [ -e "$build_dir/npm-shrinkwrap.json" ]; then

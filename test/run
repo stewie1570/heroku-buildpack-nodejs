@@ -15,8 +15,7 @@ testNpmCi() {
   assertCapturedSuccess
 
    # test logging
-  assertFileContains "feature-use-npm-ci=true" "$log_file"
-  assertFileContains "supports-npm-ci=true" "$log_file"
+  assertFileContains "use-npm-ci=true" "$log_file"
   assertFileContains "npm-install-time=" "$log_file"
   assertFileContains "npm-install-memory=" "$log_file"
 
@@ -35,13 +34,25 @@ testNpmCiFallback() {
 
   assertCapturedSuccess
 
-  # make sure the feature is turned on
-  assertFileContains "feature-use-npm-ci=true" "$log_file"
-  # and detecting that we shouldn't use npm ci
-  assertFileContains "supports-npm-ci=false" "$log_file"
+  # detecting that we shouldn't use npm ci
+  assertFileContains "use-npm-ci=false" "$log_file"
   # and ran "npm install"
   assertFileContains "npm-install-time=" "$log_file"
   assertFileContains "npm-install-memory=" "$log_file"
+}
+
+testNpmCiDisabled() {
+  local cache env_dir log_file
+  cache=$(mktmpdir)
+  env_dir=$(mktmpdir)
+  log_file=$(mktemp)
+
+  echo "true" > $env_dir/USE_NPM_INSTALL
+
+  BUILDPACK_LOG_FILE="$log_file" compile "node-10-npm-ci" $cache $env_dir
+
+  assertFileContains "use-npm-ci=false" "$log_file"
+  assertCapturedSuccess
 }
 
 testFlatmapStream() {
@@ -63,10 +74,39 @@ testBuildScriptBehavior() {
   assertCapturedSuccess
 }
 
+testNgBuildScriptWarning() {
+  compile "ng-build-script"
+  assertCaptured "\"ng build\" detected as build script. We recommend you use \`ng build --prod\` or add \`--prod\` to your build flags."
+}
+
 testBuildScriptYarn() {
   compile "build-script-yarn"
   assertCaptured "Running build (yarn)"
   assertCaptured "build hook message"
+  assertCapturedSuccess
+}
+
+testBuildFlags() {
+  cache=$(mktmpdir)
+  env_dir=$(mktmpdir)
+
+  echo "--prod --optimize" > $env_dir/NODE_BUILD_FLAGS
+  compile "build-script" $cache $env_dir
+  assertCaptured "Running build"
+  assertCaptured "Running with --prod --optimize flags"
+  assertCaptured 'echo build hook message "--prod --optimize"'
+  assertCapturedSuccess
+}
+
+testBuildFlagsWithYarn() {
+  cache=$(mktmpdir)
+  env_dir=$(mktmpdir)
+
+  echo "--prod --optimize" > $env_dir/NODE_BUILD_FLAGS
+  compile "build-script-yarn" $cache $env_dir
+  assertCaptured "Running build"
+  assertCaptured "Running with --prod --optimize flags"
+  assertCaptured "$ echo build hook message '--prod --optimize'"
   assertCapturedSuccess
 }
 
@@ -117,8 +157,8 @@ testYarnRun() {
 testNoVersion() {
   compile "no-version"
   assertCaptured "engines.node (package.json):  unspecified"
-  assertCaptured "Resolving node version 12.x"
-  assertCaptured "Downloading and installing node 12."
+  assertCaptured "Resolving node version 14.x"
+  assertCaptured "Downloading and installing node 14."
   assertCapturedSuccess
 }
 
@@ -230,14 +270,11 @@ testYarnNativeCacheFalse() {
   compile "yarn-native-cache-false" $cache
   # These will be created if yarn is using the directory for its cache
 
-  ls "$cache"
-
   # Run this again with a cache
   compile "yarn-native-cache-false" $cache
 
   # assert that devDependencies are not cached
   assertEquals "1" "$(ls -1 $cache/node/cache/node_modules | grep -c debug | tr -d ' ')"
-  assertCaptured "Using Yarn Cache has moved behind an environment variable."
   assertCapturedSuccess
 }
 
@@ -456,10 +493,6 @@ testWarnDevDeps() {
   assertCaptured "A module may be missing"
   assertNotCaptured "This module may be specified"
   assertCapturedError
-  compile "failing-build"
-  assertNotCaptured "A module may be missing"
-  assertNotCaptured "This module may be specified"
-  assertCapturedError
 }
 
 testEnvBlacklist() {
@@ -666,22 +699,28 @@ testIoJs() {
 # Yarn 2
 testYarn2() {
   compile "yarn-2"
+  assertCaptured "The buildpack won't cache the dependencies in .yarn/cache."
   assertCaptured "Running 'yarn install' with yarn.lock"
   # tsc output
   assertCaptured "Version 3.9.3"
-  assertCaptured "Using Yarn 2, writing to the cache and pruning of dependencies will be skipped."
+  assertCapturedSuccess
+}
+
+testYarn2WithNodeModules() {
+  compile "yarn-2-with-node-modules"
+  assertCaptured "Running 'yarn install' with yarn.lock"
+  assertCaptured "Caching build"
+  assertCapturedSuccess
+}
+
+testYarn2WithoutYarnCache() {
+  compile "yarn-2-without-cache"
   assertCapturedSuccess
 }
 ###
 
 ###
 # Yarn 2 warnings
-testYarn2WithNodeModulesCache() {
-  compile "yarn-2"
-  assertCaptured "You are using Yarn 2. The buildpack won't cache because Heroku is expecting dependencies from the .yarn directory for each build."
-  assertCapturedSuccess
-}
-
 testYarn2WithEngine() {
   compile "yarn-2-with-engine"
   assertCaptured "You don't need to specify Yarn engine. Heroku will install the latest Yarn 1.x"
@@ -698,6 +737,14 @@ testYarn2WithNpmrcAndYarnrc() {
 
 ###
 # Yarn 2 failures
+testYarn2WithProductionFlag() {
+  env_dir=$(mktmpdir)
+  echo "true" > $env_dir/YARN_PRODUCTION
+  compile "yarn-2" "$(mktmpdir)" $env_dir
+  assertCaptured "The --production flag is no longer used for installing production dependencies for entire projects, but is still used in workspaces."
+  assertCapturedError
+}
+
 testYarn2WithoutYarnrcYml() {
   compile "yarn-2-without-yarnrc-yml"
   assertCaptured "The 'yarnrc.yml' file is not found"
@@ -711,7 +758,7 @@ testYarn2WithoutYarnPath() {
 }
 
 testYarn2WithoutYarnRelease() {
-  compile "yarn-2-without-cache"
+  compile "yarn-2-without-yarn"
   assertCaptured "Yarn was not found"
   assertCapturedError
 }
@@ -779,14 +826,6 @@ testFailingBuild() {
   assertCapturedError 1 ""
 }
 
-testTicketOnFailure() {
-  compile "invalid-dependency"
-  assertCaptured "troubleshooting-node-deploys"
-  assertCaptured "please submit a ticket"
-  assertNotCaptured "possible problems"
-  assertCapturedError
-}
-
 testInfoEmpty() {
   compile "info-empty"
   assertCaptured "engines.node (package.json):  unspecified"
@@ -821,6 +860,9 @@ testRangeWithSpace() {
 testInvalidDependency() {
   compile "invalid-dependency"
   assertCaptured "npm ERR! 404"
+  assertCaptured "troubleshooting-node-deploys"
+  assertCaptured "please submit a ticket"
+  assertNotCaptured "possible problems"
   assertCapturedError 1 ""
 }
 
@@ -862,8 +904,10 @@ testDynamicProcfile() {
 testEnvVars() {
   env_dir=$(mktmpdir)
   echo "false" > $env_dir/NPM_CONFIG_PRODUCTION
+  echo "true" > $env_dir/USE_NPM_INSTALL
   compile "stable-node" "$(mktmpdir)" $env_dir
   assertCaptured "NPM_CONFIG_PRODUCTION=false"
+  assertCaptured "USE_NPM_INSTALL=true"
   assertCapturedSuccess
 }
 
@@ -953,24 +997,6 @@ testNodeEnvTestDepenenciesYarn() {
   assertCapturedSuccess
 }
 
-# When NPM_CONFIG_PRODUCTION = true we should not install devDependencies
-testOnlyDependenciesInstalled() {
-  env_dir=$(mktmpdir)
-  echo "true" > $env_dir/NPM_CONFIG_PRODUCTION
-  compile "dependencies" "$(mktmpdir)" $env_dir
-  assertNotCaptured "lodash"
-  assertCapturedSuccess
-}
-
-# When NPM_CONFIG_PRODUCTION = true we should not install devDependencies with Yarn
-testOnlyDependenciesInstalledYarn() {
-  env_dir=$(mktmpdir)
-  echo "true" > $env_dir/YARN_PRODUCTION
-  compile "dependencies-yarn" "$(mktmpdir)" $env_dir
-  assertNotCaptured "lodash"
-  assertCapturedSuccess
-}
-
 testModulesCheckedInWithDevDependencies() {
   compile "dependencies-modules-checked-in-with-devdependencies"
   assertCaptured "Rebuilding any native modules"
@@ -1050,12 +1076,6 @@ testCIEnvVars() {
   compileTest "ci-env-test"
   assertCaptured "NODE_ENV: test"
   assertCapturedSuccess
-}
-
-# If compile fails, test-compile should also fail
-testCICompileFails() {
-  testCompile "failing-build"
-  assertCapturedError
 }
 
 testCIEnvVarsOverride() {
@@ -1270,6 +1290,11 @@ testBuildMetaData() {
   assertFileContains "restore-cache-time=" $log_file
   assertFileContains "save-cache-time=" $log_file
 
+  # resolve-version tests
+  assertFileContains 'resolve-v1-node="10.23.1 https://s3.amazonaws.com/heroku-nodebin/node/release/linux-x64/node-v10.23.1-linux-x64.tar.gz"' $log_file
+  assertFileContains 'resolve-v2-node="10.23.1 https://s3.amazonaws.com/heroku-nodebin/node/release/linux-x64/node-v10.23.1-linux-x64.tar.gz"' $log_file
+  assertFileContains "resolve-is-equal-node=true" $log_file
+
   # erase the log file
   echo "" > $log_file
   BUILDPACK_LOG_FILE="$log_file" compile "yarn"
@@ -1281,6 +1306,11 @@ testBuildMetaData() {
   assertFileContains "install-yarn-binary-memory=" $log_file
   assertFileContains "install-yarn-binary-time=" $log_file
   assertFileContains "node-build-success=true" $log_file
+
+  # resolve-version tests
+  assertFileContains 'resolve-v1-yarn="1.22.10 https://s3.amazonaws.com/heroku-nodebin/yarn/release/yarn-v1.22.10.tar.gz"' $log_file
+  assertFileContains 'resolve-v2-yarn="1.22.10 https://s3.amazonaws.com/heroku-nodebin/yarn/release/yarn-v1.22.10.tar.gz"' $log_file
+  assertFileContains "resolve-is-equal-yarn=true" $log_file
 }
 
 testWorkspaceMetaData() {

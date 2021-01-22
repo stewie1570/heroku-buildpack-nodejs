@@ -4,7 +4,7 @@
 
 This is the official [Heroku buildpack](http://devcenter.heroku.com/articles/buildpacks) for Node.js apps.
 
-[![Build Status](https://travis-ci.com/heroku/heroku-buildpack-nodejs.svg?branch=master)](https://travis-ci.com/heroku/heroku-buildpack-nodejs)
+[![CircleCI](https://circleci.com/gh/heroku/heroku-buildpack-nodejs/tree/main.svg?style=svg)](https://circleci.com/gh/heroku/heroku-buildpack-nodejs)
 
 ## Documentation
 
@@ -19,21 +19,33 @@ For more general information about buildpacks on Heroku:
 - [Buildpacks](https://devcenter.heroku.com/articles/buildpacks)
 - [Buildpack API](https://devcenter.heroku.com/articles/buildpack-api)
 
+## Using the Heroku Node.js buildpack
+
+It's suggested that you use the latest version of the release buildpack. You can set it using the `heroku-cli`.
+
+```sh
+heroku buildpacks:set heroku/nodejs
+```
+
+Your builds will always used the latest published release of the buildpack.
+
+If you need to use the git url, you can use the `latest` tag to make sure you always have the latest release. **The `main` branch will always have the latest buildpack updates, but it does not correspond with a numbered release.**
+
+```sh
+heroku buildpacks:set https://github.com/heroku/heroku-buildpack-nodejs#latest -a my-app
+```
+
 ## Locking to a buildpack version
 
-In production, you may want to lock dependencies - including
-buildpacks - to a specific version.
+Even though it's suggested to use the latest release, you may want to lock dependencies - including buildpacks - to a specific version.
 
 First, find the version you want from
 [the list of buildpack versions](https://github.com/heroku/heroku-buildpack-nodejs/releases).
 Then, specify that version with `buildpacks:set`:
 
 ```
-heroku buildpacks:set https://github.com/heroku/heroku-buildpack-nodejs#v170 -a my-app
+heroku buildpacks:set https://github.com/heroku/heroku-buildpack-nodejs#v176 -a my-app
 ```
-
-If you have trouble upgrading to the latest version of the buildpack, please
-open a support ticket at [help.heroku.com](https://help.heroku.com/) so we can assist.
 
 ### Chain Node with multiple buildpacks
 
