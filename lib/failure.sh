@@ -10,6 +10,7 @@ detect_package_manager() {
 }
 
 fail() {
+  meta_time "build-time" "$build_start_time"
   log_meta_data >> "$BUILDPACK_LOG_FILE"
   exit 1
 }
@@ -412,18 +413,6 @@ fail_missing_yarn_vendor() {
        $ yarn set version berry
 
       Read more at the Yarn docs: https://yarnpkg.com/getting-started/install#per-project-install
-      "
-    fail
-  fi
-}
-
-fail_yarn_2_production() {
-  local build_dir="$1"
-
-  if [[ -n "$YARN_PRODUCTION" ]]; then
-    header "Build failed"
-    warn "
-      The --production flag is no longer used for installing production dependencies for entire projects, but is still used in workspaces. See https://devcenter.heroku.com/articles/migrating-to-yarn-2#update-heroku-environment-with-plug-n-play-remove-production-environment-variables for additional information.
       "
     fail
   fi
