@@ -2,6 +2,10 @@
 
 ## main
 
+## v185 (2021-06-03)
+- Drop Heroku-16 from CI test matrix ([#920](https://github.com/heroku/heroku-buildpack-nodejs/pull/920))
+- Add metrics plugin for Node 16 ([#923](https://github.com/heroku/heroku-buildpack-nodejs/pull/923))
+
 ## v184 (2021-05-20)
 - Prune devDependencies with Yarn 2 ([#891](https://github.com/heroku/heroku-buildpack-nodejs/pull/891))
 - Add 10.x, 12.x, and 14.x to inventory ([902](https://github.com/heroku/heroku-buildpack-nodejs/pull/902))
